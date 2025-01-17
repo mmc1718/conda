@@ -1570,3 +1570,66 @@ def test_deprecations(function: Callable) -> None:
         # only care whether we are properly warning about upcoming deprecation
         # we expect all of these functions to fail spectacularly
         function()
+
+
+def test_display_actions_packages_downgraded(monkeypatch: MonkeyPatch) -> None:
+    """Only downgraded versions of packages are listed as downgraded"""
+    monkeypatch.setenv("CONDA_SHOW_CHANNEL_URLS", "True")
+    reset_context()
+    actions = defaultdict(list)
+    actions.update(
+        {
+            "LINK": [
+                get_matchspec_from_index(index, "channel-1::dateutil==2.1=py33_1"),
+            ],
+            "UNLINK": [
+                get_matchspec_from_index(index, "channel-1::dateutil==2.1=py33_0"),
+            ],
+        }
+    )
+
+    with captured() as c:
+        display_actions(actions, index)
+
+    assert c.stdout == "\n".join(
+        (
+            "",
+            "## Package Plan ##",
+            "",
+            "",
+            "The following packages will be UPDATED:",
+            "",
+            "    dateutil: 2.1-py33_0 channel-1 --> 2.1-py33_1 channel-1",
+            "",
+            "",
+        )
+    )
+
+    actions = defaultdict(list)
+    actions.update(
+        {
+            "LINK": [
+                get_matchspec_from_index(index, "channel-1::dateutil==2.1=py33_0"),
+            ],
+            "UNLINK": [
+                get_matchspec_from_index(index, "channel-1::dateutil==2.1=py33_1"),
+            ],
+        }
+    )
+
+    with captured() as c:
+        display_actions(actions, index)
+
+    assert c.stdout == "\n".join(
+        (
+            "",
+            "## Package Plan ##",
+            "",
+            "",
+            "The following packages will be DOWNGRADED:",
+            "",
+            "    dateutil: 2.1-py33_1 channel-1 --> 2.1-py33_0 channel-1",
+            "",
+            "",
+        )
+    )
